@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWF Player</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111827;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-border: rgba(148, 163, 184, 0.22);
+      --text: #e5eef8;
+      --muted: #93a4b8;
+      --accent: #f97316;
+      --accent-2: #fb7185;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(249, 115, 22, 0.28), transparent 32%),
+        radial-gradient(circle at top right, rgba(251, 113, 133, 0.2), transparent 24%),
+        linear-gradient(160deg, #020617 0%, #111827 52%, #172554 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(1200px, 100%);
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .panel,
+    .player-shell {
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      line-height: 1.05;
+    }
+
+    .lead {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    select,
+    input[type="file"],
+    button {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--text);
+      font-size: 0.98rem;
+    }
+
+    select,
+    input[type="file"] {
+      margin-bottom: 16px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff7ed;
+      transition: transform 140ms ease, box-shadow 140ms ease;
+      box-shadow: 0 16px 40px rgba(249, 115, 22, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 50px rgba(249, 115, 22, 0.3);
+    }
+
+    .hint,
+    .status,
+    .game-meta {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .status {
+      min-height: 3em;
+    }
+
+    .player-shell {
+      min-height: 780px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .player-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .player-frame {
+      flex: 1;
+      overflow: hidden;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98)),
+        repeating-linear-gradient(
+          45deg,
+          rgba(148, 163, 184, 0.04),
+          rgba(148, 163, 184, 0.04) 12px,
+          transparent 12px,
+          transparent 24px
+        );
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      position: relative;
+    }
+
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    #playerHost,
+    ruffle-player {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    code {
+      color: #fde68a;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .player-shell {
+        min-height: 70vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <h1>SWF Player</h1>
+      <p class="lead">
+        Chạy các game Flash `.swf` trong thư mục hiện tại bằng `Ruffle`.
+      </p>
+
+      <label for="gameSelect">Chọn game có sẵn</label>
+      <select id="gameSelect">
+        <option value="_flash__kamen_rider_build_v_5_35_14_beta_by_crimes0n-dbn7j8u.swf">Kamen Rider Build</option>
+        <option value="_flash__kamen_rider_decade_v_2_0_by_crimes0n-d5z9dw1.swf">Kamen Rider Decade</option>
+        <option value="_flash__kamen_rider_ex_aid_v10_42_14_by_crimes0n-daln5bl.swf">Kamen Rider Ex-Aid</option>
+        <option value="_flash__kamen_rider_gaim_arms_change_v17_61_5_beta_by_crimes0n-d6r6la1.swf">Kamen Rider Gaim</option>
+        <option value="_flash__kamen_rider_wizard_v3_1_by_crimes0n-d5zcwv3_0.swf">Kamen Rider Wizard</option>
+        <option value="_flash__kamen_rider_w__double__v1_8_beta_by_crimes0n-d7fpc1v.swf">Kamen Rider W / Double</option>
+      </select>
+
+      <button id="loadSelected" type="button">Chạy game đã chọn</button>
+
+      <label for="fileInput" style="margin-top: 20px;">Hoặc mở file `.swf` khác</label>
+      <input id="fileInput" type="file" accept=".swf,application/x-shockwave-flash">
+      <button id="loadLocal" type="button">Chạy file từ máy</button>
+
+      <div class="status" id="status">
+        Đang chờ chọn game.
+      </div>
+
+      <div class="game-meta" id="gameMeta">
+        Trang này nên mở qua local server, ví dụ <code>http://127.0.0.1:8000/swf-player.html</code>.
+      </div>
+
+      <p class="hint">
+        Nếu game không chạy, nguyên nhân thường là file dùng ActionScript chưa được `Ruffle` hỗ trợ đầy đủ.
+      </p>
+    </section>
+
+    <section class="player-shell">
+      <div class="player-topbar">
+        <span id="currentTitle">Chưa tải game</span>
+        <span>Engine: Ruffle Web</span>
+      </div>
+      <div class="player-frame">
+        <div class="placeholder" id="placeholder">
+          Chọn một game ở khung bên trái rồi bấm chạy.
+        </div>
+        <div id="playerHost"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+  <script>
+    const playerHost = document.getElementById("playerHost");
+    const placeholder = document.getElementById("placeholder");
+    const statusEl = document.getElementById("status");
+    const metaEl = document.getElementById("gameMeta");
+    const titleEl = document.getElementById("currentTitle");
+    const selectEl = document.getElementById("gameSelect");
+    const fileInput = document.getElementById("fileInput");
+    const gameLabels = new Map([
+      ["_flash__kamen_rider_build_v_5_35_14_beta_by_crimes0n-dbn7j8u.swf", "Kamen Rider Build"],
+      ["_flash__kamen_rider_decade_v_2_0_by_crimes0n-d5z9dw1.swf", "Kamen Rider Decade"],
+      ["_flash__kamen_rider_ex_aid_v10_42_14_by_crimes0n-daln5bl.swf", "Kamen Rider Ex-Aid"],
+      ["_flash__kamen_rider_gaim_arms_change_v17_61_5_beta_by_crimes0n-d6r6la1.swf", "Kamen Rider Gaim"],
+      ["_flash__kamen_rider_wizard_v3_1_by_crimes0n-d5zcwv3_0.swf", "Kamen Rider Wizard"],
+      ["_flash__kamen_rider_w__double__v1_8_beta_by_crimes0n-d7fpc1v.swf", "Kamen Rider W / Double"]
+    ]);
+
+    let currentObjectUrl = null;
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function resetPlayer() {
+      playerHost.replaceChildren();
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+    }
+
+    function createPlayer() {
+      if (!window.RufflePlayer || !window.RufflePlayer.newest) {
+        throw new Error("Khong tai duoc Ruffle. Kiem tra ket noi mang.");
+      }
+
+      const ruffle = window.RufflePlayer.newest();
+      const player = ruffle.createPlayer();
+      player.config = {
+        autoplay: "on",
+        unmuteOverlay: "hidden",
+        backgroundColor: "#0f172a",
+        warnOnUnsupportedContent: true
+      };
+      playerHost.appendChild(player);
+      return player;
+    }
+
+    function loadSource(source, title, sourceType, objectUrlToKeep = null) {
+      resetPlayer();
+      currentObjectUrl = objectUrlToKeep;
+      placeholder.style.display = "none";
+
+      try {
+        const player = createPlayer();
+        player.load({
+          url: source
+        });
+        titleEl.textContent = title;
+        metaEl.textContent = sourceType === "local"
+          ? "Dang chay tu file da chon tren may."
+          : "Dang chay file SWF trong thu muc hien tai.";
+        setStatus("Da tai " + title + ".");
+      } catch (error) {
+        placeholder.style.display = "grid";
+        titleEl.textContent = "Tai game that bai";
+        setStatus(error.message);
+        metaEl.textContent = "Neu mo bang file:// thi hay dung local server de tranh loi truy cap file.";
+      }
+    }
+
+    document.getElementById("loadSelected").addEventListener("click", () => {
+      const fileName = selectEl.value;
+      const title = gameLabels.get(fileName) || fileName;
+      loadSource(fileName, title, "builtin");
+    });
+
+    document.getElementById("loadLocal").addEventListener("click", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        setStatus("Ban chua chon file .swf.");
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      loadSource(objectUrl, file.name, "local", objectUrl);
+    });
+
+    window.addEventListener("error", () => {
+      if (!window.RufflePlayer) {
+        setStatus("Khong the tai script Ruffle tu CDN.");
+      }
+    });
+  </script>
+</body>
+</html>
