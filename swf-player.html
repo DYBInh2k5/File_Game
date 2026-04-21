@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SWF Player</title>
+  <title>Kamen Rider SWF Player</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #111827;
       --panel: rgba(17, 24, 39, 0.82);
       --panel-border: rgba(148, 163, 184, 0.22);
       --text: #e5eef8;
@@ -175,6 +174,10 @@
       color: #fde68a;
     }
 
+    a {
+      color: #fdba74;
+    }
+
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -189,12 +192,12 @@
 <body>
   <main class="app">
     <section class="panel">
-      <h1>SWF Player</h1>
+      <h1>Kamen Rider SWF Player</h1>
       <p class="lead">
-        Chạy các game Flash `.swf` trong thư mục hiện tại bằng `Ruffle`.
+        Play the bundled Flash `.swf` games with `Ruffle` on local server or GitHub Pages.
       </p>
 
-      <label for="gameSelect">Chọn game có sẵn</label>
+      <label for="gameSelect">Bundled games</label>
       <select id="gameSelect">
         <option value="_flash__kamen_rider_build_v_5_35_14_beta_by_crimes0n-dbn7j8u.swf">Kamen Rider Build</option>
         <option value="_flash__kamen_rider_decade_v_2_0_by_crimes0n-d5z9dw1.swf">Kamen Rider Decade</option>
@@ -204,33 +207,32 @@
         <option value="_flash__kamen_rider_w__double__v1_8_beta_by_crimes0n-d7fpc1v.swf">Kamen Rider W / Double</option>
       </select>
 
-      <button id="loadSelected" type="button">Chạy game đã chọn</button>
+      <button id="loadSelected" type="button">Run selected game</button>
 
-      <label for="fileInput" style="margin-top: 20px;">Hoặc mở file `.swf` khác</label>
+      <label for="fileInput" style="margin-top: 20px;">Open another local `.swf` file</label>
       <input id="fileInput" type="file" accept=".swf,application/x-shockwave-flash">
-      <button id="loadLocal" type="button">Chạy file từ máy</button>
+      <button id="loadLocal" type="button">Run local file</button>
 
-      <div class="status" id="status">
-        Đang chờ chọn game.
-      </div>
+      <div class="status" id="status">Waiting for a game selection.</div>
 
       <div class="game-meta" id="gameMeta">
-        Trang này nên mở qua local server, ví dụ <code>http://127.0.0.1:8000/swf-player.html</code>.
+        For local use: <code>http://127.0.0.1:8000/swf-player.html</code><br>
+        For GitHub Pages: open the repo site root or <a href="./swf-player.html">this player page</a>.
       </div>
 
       <p class="hint">
-        Nếu game không chạy, nguyên nhân thường là file dùng ActionScript chưa được `Ruffle` hỗ trợ đầy đủ.
+        Add <code>?game=filename.swf</code> to the URL to share a direct link. Some ActionScript features may still be unsupported by `Ruffle`.
       </p>
     </section>
 
     <section class="player-shell">
       <div class="player-topbar">
-        <span id="currentTitle">Chưa tải game</span>
+        <span id="currentTitle">Loading not started</span>
         <span>Engine: Ruffle Web</span>
       </div>
       <div class="player-frame">
         <div class="placeholder" id="placeholder">
-          Chọn một game ở khung bên trái rồi bấm chạy.
+          Select a bundled game or open a local `.swf` file.
         </div>
         <div id="playerHost"></div>
       </div>
@@ -261,6 +263,12 @@
       statusEl.textContent = message;
     }
 
+    function setPageGameQuery(fileName) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("game", fileName);
+      window.history.replaceState({}, "", url);
+    }
+
     function resetPlayer() {
       playerHost.replaceChildren();
       if (currentObjectUrl) {
@@ -271,7 +279,7 @@
 
     function createPlayer() {
       if (!window.RufflePlayer || !window.RufflePlayer.newest) {
-        throw new Error("Khong tai duoc Ruffle. Kiem tra ket noi mang.");
+        throw new Error("Unable to load Ruffle. Check network access to the CDN.");
       }
 
       const ruffle = window.RufflePlayer.newest();
@@ -293,32 +301,35 @@
 
       try {
         const player = createPlayer();
-        player.load({
-          url: source
-        });
+        player.load({ url: source });
         titleEl.textContent = title;
-        metaEl.textContent = sourceType === "local"
-          ? "Dang chay tu file da chon tren may."
-          : "Dang chay file SWF trong thu muc hien tai.";
-        setStatus("Da tai " + title + ".");
+        metaEl.innerHTML = sourceType === "local"
+          ? "Running a local file selected from your machine."
+          : "Running a bundled SWF from the current site.";
+        setStatus("Loaded " + title + ".");
       } catch (error) {
         placeholder.style.display = "grid";
-        titleEl.textContent = "Tai game that bai";
+        titleEl.textContent = "Load failed";
         setStatus(error.message);
-        metaEl.textContent = "Neu mo bang file:// thi hay dung local server de tranh loi truy cap file.";
+        metaEl.textContent = "If you opened this page with file://, switch to a local web server or GitHub Pages.";
       }
     }
 
-    document.getElementById("loadSelected").addEventListener("click", () => {
-      const fileName = selectEl.value;
+    function loadBundledGame(fileName) {
       const title = gameLabels.get(fileName) || fileName;
+      selectEl.value = fileName;
+      setPageGameQuery(fileName);
       loadSource(fileName, title, "builtin");
+    }
+
+    document.getElementById("loadSelected").addEventListener("click", () => {
+      loadBundledGame(selectEl.value);
     });
 
     document.getElementById("loadLocal").addEventListener("click", () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) {
-        setStatus("Ban chua chon file .swf.");
+        setStatus("No local .swf file has been selected.");
         return;
       }
 
@@ -328,9 +339,16 @@
 
     window.addEventListener("error", () => {
       if (!window.RufflePlayer) {
-        setStatus("Khong the tai script Ruffle tu CDN.");
+        setStatus("Unable to load the Ruffle script from the CDN.");
       }
     });
+
+    const requestedGame = new URL(window.location.href).searchParams.get("game");
+    if (requestedGame && gameLabels.has(requestedGame)) {
+      loadBundledGame(requestedGame);
+    } else {
+      loadBundledGame(selectEl.value);
+    }
   </script>
 </body>
 </html>
